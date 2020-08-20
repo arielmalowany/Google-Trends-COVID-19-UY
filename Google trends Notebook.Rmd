@@ -1,0 +1,187 @@
+---
+title: "Google trends"
+output: html_notebook
+autor: Ariel Malowany
+date: 2020-8-20
+--- 
+
+Los paquetes utilizados fueron: 
+
+* tidyverse
+* stringr
+* knitr
+* lubridate
+* tinytex
+* ggrepel
+* gganimate
+* showtext
+* gifski
+
+```{r paquetes,include=FALSE}
+
+library(tidyverse)
+library(stringr)
+library(knitr)
+library(lubridate)
+library(ggrepel)
+library(gganimate)
+library(showtext)
+library(gifski)
+
+```
+
+### Se importan los ficheros
+
+```{r include=FALSE}
+
+opts_chunk$set(message=FALSE, warning=FALSE)
+
+```
+
+```{r Importación ficheros,message=FALSE,warning=FALSE}
+
+# Por defecto voy a importar todos los excel que estén en la carpeta, ya que podría estar trabajando con muchos archivos
+# Se bajan los csv de Google Trends sin ninguna modificación.
+
+importar_todo <- function(x = getwd()) {
+  output <- list()
+  ficheros <- list.files(x)[str_detect(list.files(),".csv")]
+  nombres <- str_remove(ficheros,".csv")
+   
+    for(i in seq_along(ficheros)) {
+      output[[i]] <- read_csv(ficheros[[i]], skip = 1)
+    
+      colnames(output[[i]])[[2]] <- nombres[[i]]
+      
+    }
+   
+    setNames(output, nombres)
+}
+
+ficheros <- importar_todo()
+
+```
+
+### Creo la función para crear gif a partir de los archivos importados
+
+```{r Gráfico}
+
+# El input de archivo es el nombre del csv descargado en la carpeta
+# Se puede cambiar el fps que por defecto es 10, así como el largo y ancho que son por defecto 800.
+
+gif_animado <- function(archivo,
+                       filename = archivo,
+                       fps = 10,
+                       height = 800,
+                       width = 800) {
+meses <- setNames(c(1:12), c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre"))
+
+  base_coronavirus <- ficheros[[archivo]] %>%
+    mutate(
+      nmes = month(`Día`),
+      mespalabra = names(meses[nmes])
+    ) %>%
+    group_by(nmes) %>%
+    mutate(ndia = rank(`Día`))
+
+  dias_grafico <- c(
+    filter(base, `ndia` == 1)[["Día"]],
+    base[nrow(base), 1][[1]]
+  )
+
+  meses_grafico <- names(meses[month(dias_grafico)])
+
+  animacion <- ggplot(base_coronavirus, aes_string("Día", archivo)) +
+    geom_line(aes(group = 1), color = "firebrick", size = 2) +
+    scale_x_date(
+      breaks = diasgrafico,
+      labels = str_c(day(dias_grafico), " ", meses_grafico, " 2020")
+    ) +
+    labs(
+      x = "Día",
+      y = "Popularidad",
+      title = str_c("Popularidad del término de búsqueda ", archivo, " ", "en Google"),
+      caption = "Fuente: Google Trends"
+    ) +
+    theme_bw(base_size = 18) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    transition_reveal(`Día`) +
+    ease_aes("linear")
+  animate(animacion,
+    height = 800,
+    width = 800,
+    fps = fps,
+    renderer = gifski_renderer()
+  )
+
+  anim_save(str_c(filename, ".gif"))
+}
+
+```
+
+### Comparación términos coronavirus y covid
+
+```{r}
+
+meses <- setNames(c(1:12), c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre"))
+
+base_covid_corona <- ficheros[["covid y corona"]]
+
+colnames(base_covid_corona)[c(2, 3)] <- c("covid", "coronavirus")
+
+base_covid_corona <- base_covid_corona %>%
+  pivot_longer(
+    cols = c("covid", "coronavirus"),
+    names_to = "termino",
+    values_to = "popularidad"
+  ) %>%
+  mutate(
+    nmes = month(`Día`),
+    mespalabra = names(meses[nmes])
+  ) %>%
+  group_by(nmes, termino) %>%
+  mutate(ndia = rank(`Día`))
+
+dias_grafico <- c(
+  unique(filter(base_covid_corona, `ndia` == 1)[["Día"]]),
+  base_covid_corona[nrow(base_covid_corona), 1][[1]]
+)
+
+meses_grafico <- names(meses[month(dias_grafico)])
+
+animacion <- ggplot(base_covid_corona) +
+  geom_line(aes(`Día`, popularidad, color = termino), size = 1) +
+  scale_x_date(
+    breaks = dias_grafico,
+    labels = str_c(day(dias_grafico), " ", meses_grafico, " 2020")
+  ) +
+  labs(
+    x = "Día",
+    y = "Popularidad",
+    title = str_c("Popularidad de los términos de búsqueda Coronavirus y COVID en Google"),
+    caption = "Fuente: Google Trends"
+  ) +
+  theme_bw(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  transition_reveal(`Día`) +
+  ease_aes("linear")
+animate(animacion,
+  height = 800,
+  width = 800,
+  renderer = gifski_renderer()
+)
+
+anim_save("covidycorona.gif")
+```
+
+
+
+
+
+
+
+
+
+
+
+
