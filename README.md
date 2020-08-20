@@ -19,3 +19,4 @@ El proyecto se realizó en R y los paquetes utilizados fueron:
 * showtext
 * gifski
 
+Para los gráficos individuales, el código estaría pronto para ejecutar luego de hacer la consulta en Google Trends y nombrar los archivos. Para la comparación de los términos coronavirus y COVID, se descarga la consulta directamente, pero el código es un poco menos flexible (por ejemplo supone que se consultó covid vs coronavirus y no coronavirus vs covid). De todos modos, es un código de práctica.
